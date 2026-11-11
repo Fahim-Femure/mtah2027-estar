@@ -1,10 +1,8 @@
-# P1-B: Possession Intelligence Engine, first version
+# Possession Intelligence Engine (`possession-rules-v0.2`)
 
-Date: 2026-11-04. Milestone: P1-B first engine version (built over foundation commit `7beb18e`).
-Historical P1-B status (2026-11-04): a deterministic rule-based engine, tested at that milestone
-on invented scenarios only; at that time it had not yet been run on any match asset. Nothing here claims real-data accuracy.
+Date: 2026-11-04 (v0.1 design); updated for Smart Tagging `v0.2` Option A (`possession-rules-v0.2`).
 
-> **Post-promotion status (`8a093bb` algorithm baseline / `d3faa90` reproduction baseline):** Smart Tagging `v0.2` Option A (`d8a0dd0`, `possession-rules-v0.2`) and Data Engineering's real-data loader (`166f35f`, `src/mtah/pipeline.py`) are integrated. `--engine hybrid` is wired into `src/mtah/__main__.py` (`baseline` remains the default CLI engine), and `scripts/check_environment.py` verifies the Python `3.11.9` `requirements.lock` environment. Subsequent to P1-B, the integrated pipeline was run locally by authorized operators strictly for non-ground-truth operational diagnostics and CSV format/determinism checks on supplied tactical tracking data; those diagnostics do not establish accuracy and are not competition-scoring evidence. Historical P1-B (`v0.1`) design context and dependency history below are retained for traceability.
+> **Release status (`possession-rules-v0.2`):** Smart Tagging `v0.2` Option A abstention (`possession-rules-v0.2`) and the real-data loader (`src/mtah/pipeline.py`) are integrated. `--engine hybrid` selects this engine in `src/mtah/__main__.py` (`baseline` remains the default CLI engine), and `scripts/check_environment.py` verifies the CPython `3.11.9` `requirements.lock` environment. Local non-ground-truth operational diagnostics verified CSV format and determinism on tactical data without measuring accuracy or competition scores. Historical design context below is preserved for traceability.
 
 ## Scope and safety
 
@@ -27,11 +25,10 @@ result = predict(match, EngineConfig(confirm_frames=12))
 ```
 
 `result.engine_version` is `possession-rules-v0.2` (was `possession-rules-v0.1`). `result.config_digest` is the SHA-256 of the
-canonical config JSON. `result.confidence` is filled in. `result.reason` is `None` (see contract
-requests below). `export_submission(result, match, path)` works unchanged. A test exports an engine
+canonical config JSON. `result.confidence` is filled in. `result.reason` is `None` (populated on `EngineTrace.reason`; omitted in CSV contract v1). `export_submission(result, match, path)` works unchanged. A test exports an engine
 result through the official validator.
 
-`mtah/__main__.py` now integrates `--engine hybrid` alongside `--engine baseline` (`baseline` remains the default CLI engine for P0.3 backwards compatibility; `--engine hybrid` executes `possession-rules-v0.2`). *(Historical P1-B note: CLI wiring was originally deferred to Backend integration.)*
+`mtah/__main__.py` integrates `--engine hybrid` alongside `--engine baseline` (`baseline` remains the default CLI engine; `--engine hybrid` executes `possession-rules-v0.2`).
 
 ## Pipeline
 
@@ -165,47 +162,13 @@ not predicted: a dead ball is always `D`.
 - **No use of other Smart Tagging phase codes** (`BUILD UP`, `PROGRESSION`, transitions). The
   meaning of their `Team` tag (attacking or defending team) is unverified.
 - **Player speed, homography and geometry are not used.**
-- **Performance.** On an invented full-length input (199,319 frames, 46 slots, 43% ball missing),
-  `predict` runs in about 0.6 s and is byte-for-byte deterministic. Python 3.14.4 was used, as in
-  P0.3. The 3.11 gate is still open.
+- **Performance and determinism.** On a synthetic full-length input (199,319 frames, 46 slots, 43% ball missing),
+  `predict` runs deterministically and reproduces identical bytes across repeat runs under CPython 3.11.9 x64 (`requirements.lock`).
+- **Contract v1 scope.** Exported CSV submissions contain `frame,label` only, and `PredictionResult.reason` stays `None` (diagnostic codes in `temporal.REASONS` remain on `EngineTrace.reason`). Optional per-slot on-pitch masks and 3-D ball height are not part of `MatchInput` contract v1.
 
-## Unresolved data dependencies for Backend / Data Engineering
+## Test coverage (`possession-rules-v0.2`)
 
-1. **Out-of-pitch coordinates.** Does the ATD report finite positions outside [0, 1] when the ball
-   leaves play, or does the ball become NaN? How often? Please give local counts only, no rows.
-   The main dead-ball rule depends on this.
-2. **Ball speed.** Is `ball_speed_mps` populated for the ball in the raw ATD? Is it 2-D or 3-D, and
-   is it smoothed? If it is absent, the engine falls back to position-derived speed.
-3. **Smart Tagging tag keys and values.** These must be passed through `Event.tags` with their
-   original key casing (`Type`, `Team`, `Side`, …). Backend should also confirm that `SET PIECES`
-   intervals start at, or just before, the restart.
-4. **Set-piece `Team` semantics.** Is it the restarting team for corners, goal kicks and free kicks?
-   Throw-ins are documented as `N/A`.
-5. **Tracker duplicates and out-of-pitch players.** Do substitutes or staff appear as slots with a
-   team assignment? A bench player near a ball that has gone out could create false control
-   evidence. The engine would need a per-slot "on pitch" mask, or Backend would need to drop
-   off-pitch slots.
-6. **Partial-pair normalization counts.** These come from ingestion. The engine treats normalized
-   NaN pairs as unobserved.
-7. **Height or 3-D ball position.** If the ATD carries ball height, an aerial-ball signal would
-   improve the in-flight rule. Contract v1 has no field for it.
-
-## Contract change requests (need joint approval; not applied)
-
-1. **`PredictionResult.reason` vocabulary.** Contract v1 only accepts `nearest_player`,
-   `baseline_missing` and `synthetic_stub`. The request is to add the engine codes in
-   `temporal.REASONS`, or to allow a versioned engine-declared vocabulary. Until then the engine
-   omits `reason` and keeps the codes in `EngineTrace`.
-2. **Optional per-slot on-pitch mask, and optional ball height.** Needed for dependencies 5 and 7.
-
-## Test results
-
-`$env:PYTHONPATH = "$PWD/src"; python -B -m unittest discover -s tests -v`, with Python 3.14.4,
-gives **44 tests, all passing**: 17 pre-existing foundation tests and 27 engine tests. They also
-pass under `python -B -O`.
-
-The engine tests (`tests/test_engine.py`, with invented scenarios built in `tests/scenarios.py`)
-cover:
+`python -B -m unittest discover -s tests` (and `python -O -B -m unittest discover -s tests`) under CPython 3.11.9 x64 runs **240 synthetic/mock tests** covering ingestion, CLI, preflight, engine logic (`tests/test_engine.py`, `tests/test_engine_robustness.py`), and integration (`tests/test_integration_harness.py`), including:
 
 - dribbling control
 - a contested duel
@@ -219,25 +182,14 @@ cover:
 - a brief touch, with the confirmation threshold at exactly 9 and 10 frames
 - passes between teammates
 - segment reset and outside-segment X
-- abstention when there is no evidence
+- abstention when there is no evidence (`DEAD_UNCONFIRMED` / `abstain_unconfirmed_restart` in v0.2)
 - ball out, hold through missing frames, a placed ball, and the restart
 - a short out-of-pitch blip
 - an unattended stationary ball
-- set-piece lead-in, team prior, a disabled prior, a throw-in with N/A team, and tracking
-  overriding the tag
+- set-piece lead-in, team prior, a disabled prior, a throw-in with N/A team, tracking overriding the tag, overlapping/abutting clusters, and superseded reposition onsets
 - a lead-in that stops at a live ball
 - determinism, read-only outputs and config-digest validation
-- export through the official validator
+- export through the official validator and `spellF1` abstention-fill equivalence
 - engine source isolation
 
-These scenarios check that the rules are implemented as written. They do not show that the rules
-are right for real tracking data.
-
-## Next steps (proposed)
-
-1. Backend resolves dependencies 1 to 5 locally and reports aggregate counts.
-2. Joint decision on the contract `reason` vocabulary.
-3. Wire `mtah.engine.predict` behind a CLI flag, owned by Backend.
-4. Evaluate rule variants only on licensed external data about other games. Use the public window
-   only for the alignment and format sanity check described in P0.3, never to choose between
-   versions.
+These synthetic and mock scenarios verify that the documented rules execute as specified; they do not measure competition accuracy. For detailed v0.2 rule tables and synthetic test matrices, see [docs/ENGINE_V02_IMPLEMENTATION_REPORT.md](ENGINE_V02_IMPLEMENTATION_REPORT.md).

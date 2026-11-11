@@ -68,7 +68,7 @@ These guarantees are covered by `tests/test_cli.py`, `tests/test_integration_har
    - `& $py -B -m unittest discover -s tests`
    - `& $py -B -O -m unittest discover -s tests`
 3. Record `git rev-parse HEAD` and confirm `git status --short` is clean.
-4. Generate the CSV twice, into fresh paths *(when running from a source checkout without `pip install --no-deps -e .`, or from a worktree sharing another checkout's `.venv`, set `$env:PYTHONPATH = "$PWD\src"` in PowerShell — or `PYTHONPATH=src` on POSIX — before invoking `-m mtah`)*:
+4. Generate the CSV twice, into fresh paths *(when running from a source checkout without `pip install --no-deps -e .`, or from another checkout without a local `.venv`, set `$env:PYTHONPATH = "$PWD\src"` in PowerShell — or `PYTHONPATH=src` on POSIX — before invoking `-m mtah`)*:
 
    ```powershell
    & $py -B -m mtah --source atd --input <local-asset-root> --engine hybrid --out artifacts\final\run-1.csv
@@ -85,9 +85,9 @@ These guarantees are covered by `tests/test_cli.py`, `tests/test_integration_har
 
 | Command | SHA-256 | Preflight |
 |---|---|---|
-| `python -m mtah --engine baseline --frames 199319` | `13151c4c89668b48f718881fa9e921d4d2220154199407880a607a6fa8f630f0` (= P0.3) | PASS, H=99658 A=99660 D=1 X=0 |
+| `python -m mtah --engine baseline --frames 199319` | `13151c4c89668b48f718881fa9e921d4d2220154199407880a607a6fa8f630f0` | PASS, H=99658 A=99660 D=1 X=0 |
 | `python -m mtah --engine hybrid --frames 199319`, run twice | `a0f99a12195daac9f519041ad3990ecfb38e681d85de8aff653d8882345eb974` | PASS, byte-identical |
-| `tests/run_cli_with_mock_loader.py --source atd --engine hybrid`, run twice (S2 and P2-B.2 mock-loader fallback) | `15f5a261c1983b1c58f7dc7ec66bab28c3b3491e62c919765e8e179c9db75cd9` | PASS, H=79834 A=67212 D=11811 X=40462, byte-identical (before S2: `3fdfa1d2…`, D=11722) |
+| `tests/run_cli_with_mock_loader.py --source atd --engine hybrid`, run twice (mock-loader fallback) | `15f5a261c1983b1c58f7dc7ec66bab28c3b3491e62c919765e8e179c9db75cd9` | PASS, H=79834 A=67212 D=11811 X=40462, byte-identical |
 | `tests/run_cli_with_mock_loader.py --source atd --engine baseline` | `1b97b56fd403a0bbdffe7f48f5986b694b20f6fe00560f6497fe7432f4def63a` | PASS |
 | `python -m mtah --source atd ...` with no loader installed | none | exit 2, no file |
 

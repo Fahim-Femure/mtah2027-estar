@@ -1,20 +1,20 @@
 # Smart Tagging v0.2 Implementation Report (`possession-rules-v0.2`)
 
 Date: 2026-11-10
-Milestone: Smart Tagging v0.2 implementation (`d8a0dd0`)
-Environment: `<isolated-checkout>` (Python 3.11.9 x64)
-Base commit: `5a4e9a4e5dcdaa24e607889fe883e15af92bfc9a` (decision record)
-Implementation commit: `f5616c7287460ba91c67b7b4a1a1fff85edc064d` (`f5616c7`)
+Engine version: `possession-rules-v0.2` (Smart Tagging v0.2 Option A abstention)
+Environment: CPython 3.11.9 x64
 
 > **Compliance note (v0.2 implementation and synthetic-test phase):** During the v0.2 engine implementation and synthetic verification recorded in this milestone report, all runs used only invented synthetic fixtures (`tests/scenarios.py`, `mtah.synthetic`, `tests/mock_loader.py`) and public documentation/code; no competition match data, ground truth, or video was read by those runs, and no parameter was calibrated or tuned. Synthetic results verify rule logic and regression cases only and make no claim about competition accuracy.
 
-> **Post-promotion status (`8a093bb` algorithm baseline / `d3faa90` reproduction baseline):** Integrated from `8a093bbf0270f35f3defe575220c5ff25b691baa`. Under CPython `3.11.9` (64-bit), `scripts/check_environment.py` verifies exact `3.11.9` and `requirements.lock`, and all `240` synthetic/mock tests pass in both normal (`-B`) and optimized (`-O -B`) runs. Separately from the synthetic test suite and from competition scoring, the non-GT Section 8 aggregate diagnostic noted as open in §9.1 was subsequently executed locally for operational verification without ground-truth scoring, accuracy measurement, or parameter selection/tuning. Historical milestone findings below are preserved unchanged.
+> **Integrated release verification:** Under CPython `3.11.9` (64-bit), `scripts/check_environment.py` verifies exact `3.11.9` and `requirements.lock`, and all `240` synthetic/mock tests pass in both normal (`-B`) and optimized (`-O -B`) runs. Separately from the synthetic test suite and from competition scoring, non-GT local aggregate operational diagnostics were executed without ground-truth scoring, accuracy measurement, or parameter selection/tuning.
 
 ---
 
 ## 1. Policy Implemented
 
-Implements Option A (abstain) from `docs/ENGINE_DECISION_TAGGING_NO_ONSET.md`:
+Implements **Option A (abstain)** for Smart Tagging restarts without movement evidence (rules also summarized in [docs/POSSESSION_ENGINE.md](POSSESSION_ENGINE.md)):
+
+- **Design rationale:** `CHALLENGE.md` defines `X` as the system declining to guess. Inside a set-piece window with an active stoppage at `S` and no movement onset, `evaluation/possession_metrics.py::fill_abstentions` forward-fills `X` from the preceding `D` label for `spellF1` while charging `macroF1` for unconfirmed frames, and distinct reason codes (`abstain_unconfirmed_restart`, `backfilled_unconfirmed_restart` at confidence `0.4`) keep unconfirmed restarts separated from evidence-backed restarts (`0.5`).
 
 - **No confirmed movement evidence means no confirmed restart.**
 - **Cluster formation (`deadball.cluster_set_pieces`):** Per segment, `SET PIECES` events whose `start_frame` lies inside `[seg_start, seg_stop)` (with `end_frame` clipped to `seg_stop`) are grouped transitively by interval overlap into `[S, E)` clusters. Abutting tags (`e0 == s0'`) stay separate clusters. A cluster's team is the common `"H"`/`"A"` team when all tagged members agree (`None`/`N/A` members do not vote), else `None`.
@@ -40,16 +40,16 @@ Implements Option A (abstain) from `docs/ENGINE_DECISION_TAGGING_NO_ONSET.md`:
 
 All commands ran in an isolated checkout with `PYTHONPATH=<repo>\src` using Python 3.11.9 (`<repo>\.venv\Scripts\python.exe`).
 
-1. **Baseline at `5a4e9a4` (before any edits):**
+1. **Pre-v0.2 baseline (before v0.2 edits):**
    - `unittest discover -s tests`: **185 tests OK (expected failures=3)** in 26.446s.
    - `unittest discover -s tests` with `-O`: **185 tests OK (expected failures=3)** in 24.404s.
 2. **Test-first red run (after adding T4–T12 + 4 additional coverage tests and revising T3 expectation, before editing `src/mtah/engine/`):**
    - `test_engine_robustness.py`: **75 tests — 4 failures, 9 errors, 3 expected failures** (all 13 new tests failed/errored against v0.1).
    - `test_integration_harness.py`: **23 tests — 1 failure** (`ScorerEquivalenceTests.test_unconfirmed_window_is_dead_after_official_abstention_fill`).
-3. **Post-implementation pre-expectation-update run (engine updated, before removing `@unittest.expectedFailure` and before updating §5f expectations):**
-   - `test_engine*.py`: **108 tests — 7 failures, 1 error, 3 unexpected successes** (T1, T2, T3 all passed unexpectedly; all 13 new tests passed; only the §5f tests with v0.1 expectations failed/errored).
+3. **Post-implementation pre-expectation-update run (engine updated, before removing `@unittest.expectedFailure` and before updating legacy v0.1 set-piece expectations):**
+   - `test_engine*.py`: **108 tests — 7 failures, 1 error, 3 unexpected successes** (T1, T2, T3 all passed unexpectedly; all 13 new tests passed; only the legacy v0.1 set-piece tests failed/errored).
    - `test_integration_harness.py`: **23 tests — OK** (including T12).
-4. **Final post-update run (all markers removed, §5f expectations updated):**
+4. **Final post-update run (all markers removed, legacy v0.1 expectations updated):**
    - Complete suite, normal mode: **199 tests OK** (27.803s).
    - Complete suite, `-O` mode: **199 tests OK** (29.939s).
 
@@ -77,13 +77,12 @@ All T1–T12 tests and 4 supplementary coverage tests pass in both normal and `-
 | Extra | `test_abutting_tags_form_separate_clusters` | Pass | `[250, 280)` H and `[280, 310)` A stay 2 clusters; `A` prior at `310` |
 | Extra | `test_sparse_displacement_hold_release_counts_as_movement_evidence` | Pass | Sparse `moved` at `322` releases hold as `late` restart |
 
-**Spec-table notes verified during TDD:**
-- In `T3`, `docs/ENGINE_DECISION_TAGGING_NO_ONSET.md` §5a listed `reason[375:396]` in the `S` column; in `stoppage_then(600, reappear=395)`, away control begins at frame `395` (`first.onset == 395`), so backfill spans `[375, 395)` (`reason[375:395] == "backfilled_unconfirmed_restart"`, `0.4`) and frame `395` itself is `"controlled"` (`0.9`).
+**Behavior notes verified during TDD:**
+- In `T3` (`stoppage_then(600, reappear=395)`), away control begins at frame `395` (`first.onset == 395`), so backfill spans `[375, 395)` (`reason[375:395] == "backfilled_unconfirmed_restart"`, `0.4`) and frame `395` itself is `"controlled"` (`0.9`).
 - In `T5`, `stoppage_then(600, reappear=475)` establishes away control at `475`, so `[375, 475)` receives `"A"` via `"backfilled_unconfirmed_restart"` (`0.4`) rather than `"set_piece_team_prior"` (`0.4`); `"set_piece_team_prior"` is exercised in `T4` where no later control occurs.
 
-## 5. Exact Files Changed
+## 5. Files Implementing Smart Tagging v0.2
 
-Implementation commit `f5616c7`:
 - `src/mtah/engine/config.py`
 - `src/mtah/engine/deadball.py`
 - `src/mtah/engine/possession.py`
@@ -92,14 +91,11 @@ Implementation commit `f5616c7`:
 - `tests/test_engine_robustness.py`
 - `tests/test_integration_harness.py`
 - `docs/POSSESSION_ENGINE.md`
-- Internal pre-decision review note *(omitted from public snapshot; policy documented in `docs/ENGINE_DECISION_TAGGING_NO_ONSET.md`)*
-
-Report commit (HEAD):
 - `docs/ENGINE_V02_IMPLEMENTATION_REPORT.md`
 
 ## 6. Before / After Synthetic Behavior
 
-### Updated existing §5f test expectations
+### Updated legacy v0.1 set-piece test expectations
 
 | Test | v0.1 Behavior | v0.2 Behavior & Changed Frame Ranges / Reasons |
 |---|---|---|
@@ -115,7 +111,7 @@ Report commit (HEAD):
 | `SetPieceTransitionTests.test_set_piece_at_segment_end` | `H149 D46 A5` | `H149 D46 X5` (`195:200` `DEAD_UNCONFIRMED`, clipped to segment end `200`) |
 | `SetPieceTransitionTests.test_tagged_restart_ends_out_of_play_hold` | `restart=200`; `H60 D140 A100` | `unconfirmed`, `restart=210`; `H60 D140 X10 A90` (`200:210` `DEAD_UNCONFIRMED`, hold ends at `210`, `210:300` `A` prior) |
 
-### Full-length synthetic & mock CLI outputs (unchanged vs v0.1 S2 closure)
+### Full-length synthetic & mock CLI outputs (unchanged vs v0.1)
 
 Every mock tag in `tests/mock_loader.py` has continuous 1.5 m/s movement at `r + 1`, so all 78 clusters are `early` and CSV bytes are identical across v0.1 and v0.2:
 
@@ -128,13 +124,13 @@ Every mock tag in `tests/mock_loader.py` has continuous 1.5 m/s movement at `r +
 
 All S2 tests remain green:
 - `DerivedSpeedSymmetryTests`: 6/6 pass.
-- `S2GapEdgeTests`: 6/6 pass (`test_periodic_dropouts_do_not_turn_live_play_dead_before_a_tag` updated per §5f for the `unconfirmed` `[330, 340)` tag).
+- `S2GapEdgeTests`: 6/6 pass (`test_periodic_dropouts_do_not_turn_live_play_dead_before_a_tag` updated for the v0.2 `unconfirmed` `[330, 340)` tag).
 - `LongMissingBallTests.test_sparse_ball_observations_still_give_control`: passes.
 - `DeadBallTests` S2 gap-edge expectations (`H*99` lead-in stop): pass.
 
 ## 8. Normal, Optimized, Environment, and Validator Results
 
-Standalone Smart Tagging v0.2 (`d8a0dd0`) results prior to integration with Data Engineering (`166f35f`):
+Smart Tagging v0.2 verification suite (199-test milestone prior to final pipeline test additions):
 
 | Check | Result |
 |---|---|
@@ -147,25 +143,22 @@ Standalone Smart Tagging v0.2 (`d8a0dd0`) results prior to integration with Data
 | `scripts/submission_preflight.py` (all 4 outputs + repeat-run `--compare`) | `PASS` (`official validator: valid`, byte-identical across repeat runs) |
 | `evaluation/validate_submission.py` (`synth-hybrid-1.csv`, `mock-hybrid-1.csv`) | `Valid` (exit 0; exact `frame,label` schema over `0..199318`) |
 
-Combined baseline (`166f35f` + `d8a0dd0`, with `PYTHONPATH=<repo>/src` on CPython 3.11.9 x64):
+Full integrated release suite (with `PYTHONPATH=<repo>/src` on CPython 3.11.9 x64):
 
 - `python -B -m unittest discover -s tests`: **Ran 240 tests, OK**
 - `python -O -B -m unittest discover -s tests`: **Ran 240 tests, OK**
 
-## 9. Remaining Ambiguities & Unresolved Cases
+## 9. Recorded Design Trade-Offs & Limitations
 
-Per `docs/ENGINE_DECISION_TAGGING_NO_ONSET.md` (§8–§9), no extra unapproved heuristics were invented; the following cases remain explicitly recorded:
+No unapproved heuristics were added beyond the Option A abstention rules; the following design cases remain explicitly recorded:
 
-1. **Non-GT aggregate diagnostics / cluster-kind sizing (§8):** Local aggregate counts from DE (`restart_kinds` breakdown, overlapping/conflicting cluster counts, tag duration quantiles, graded frames turning `X`) were open at the `d8a0dd0` handoff milestone; the non-GT Section 8 aggregate diagnostic was subsequently completed locally. `macroF1` and competition accuracy remain unmeasured, and ground-truth scoring has not been performed.
-2. **Superseded-onset misfire (§9):** A true restart followed inside `[S, E)` by `>= min_dead_frames` (25) frames at rest `< 0.3 m/s` (e.g., player standing still on the ball) is treated as a reposition, yielding `X` or a later restart.
-3. **Pre-window live onset before an out-of-play event:** Under the literal §2 rule, any onset `h` in `[S - w, E)` followed before `E` by `>= min_dead_frames` rest frames is superseded and marked `superseded_motion` from `h` to `rest_start`. If a live-play onset in `[S - w, S)` precedes a `DEAD_OUT` event that rests `< 0.3 m/s` for `>= 25` frames before `E`, `[h, rest_start)` is suppressed as `superseded_motion` and could be absorbed into `DEAD_SET_PIECE` lead-in.
+1. **Non-GT diagnostics vs unmeasured competition accuracy:** Local aggregate operational diagnostics (`restart_kinds` counts, format checks) were completed locally without ground-truth access. `macroF1`, `spellF1`, and competition accuracy remain unmeasured, and ground-truth scoring has not been performed.
+2. **Superseded-onset misfire:** A true restart followed inside `[S, E)` by `>= min_dead_frames` (25) frames at rest `< 0.3 m/s` (e.g., player standing still on the ball) is treated as a reposition, yielding `X` or a later restart.
+3. **Pre-window live onset before an out-of-play event:** Any onset `h` in `[S - w, E)` followed before `E` by `>= min_dead_frames` rest frames is superseded and marked `superseded_motion` from `h` to `rest_start`. If a live-play onset in `[S - w, S)` precedes a `DEAD_OUT` event that rests `< 0.3 m/s` for `>= 25` frames before `E`, `[h, rest_start)` is suppressed as `superseded_motion` and could be absorbed into `DEAD_SET_PIECE` lead-in.
 4. **Post-`E` live stretch after `unconfirmed`:** If a true restart actually happened after `E` (a tag containment error), frames from `E` onward use live rules (`backfilled_unconfirmed_restart` or `set_piece_team_prior` at `0.4`).
 5. **Overlapping retaken set pieces and segment-start straddling tags:** Overlapping tags merge into one cluster, and tags whose `start_frame` lies before a segment start remain dropped.
 
-## 10. Compatibility with DE Integration Target (`166f35f`)
+## 10. Pipeline & Contract Seam Invariants
 
-Verified by merging `d8a0dd0` onto DE target `166f35fdc3c7a83457f15d043cd76349be3eae51` relative to common base `7198196`:
-
-- **Zero merge conflicts & disjoint file sets:** `166f35f` changes `docs/DATA_PIPELINE.md`, `scripts/check_environment.py`, `scripts/verify_slot_mapping_local.py`, `src/mtah/__main__.py`, `src/mtah/pipeline.py`, `tests/test_cli.py`, and `tests/test_pipeline.py`; Smart Tagging v0.2 changes 13 completely disjoint files (`src/mtah/engine/{config,deadball,possession,temporal}.py`, `tests/test_engine.py`, `tests/test_engine_robustness.py`, `tests/test_integration_harness.py`, and docs). Unlike earlier pre-fix DE candidates, `166f35f` does not modify `tests/test_integration_harness.py` (its diagnostic error test moved to `tests/test_cli.py`).
-- **Seam & event invariants:** `pipeline.py::_load_events` emits half-open `[start_frame, end_frame)` `Event` tuples sorted by `(start_frame, end_frame, event_id)` with normalized upper-cased codes and `"H"`/`"A"`/`None` teams matching `deadball.cluster_set_pieces`. `src/mtah/contracts.py`, `src/mtah/engines.py`, `src/mtah/export.py`, and `src/mtah/__main__.py` remain unchanged and compatible.
-- **Traceability:** `ENGINE_VERSION = "possession-rules-v0.2"` updates `config_digest`; `EngineTrace.restart_kinds` and `EngineTrace.reason` provide DE with local aggregate counts without changing `MatchInput`, `PredictionResult`, CLI flags, or CSV format.
+- **Seam & event invariants:** `pipeline.py::_load_events` emits half-open `[start_frame, end_frame)` `Event` tuples sorted by `(start_frame, end_frame, event_id)` with normalized upper-cased codes and `"H"`/`"A"`/`None` teams matching `deadball.cluster_set_pieces`. `src/mtah/contracts.py`, `src/mtah/engines.py`, `src/mtah/export.py`, and `src/mtah/__main__.py` preserve the shared v1 contract seam.
+- **Traceability:** `ENGINE_VERSION = "possession-rules-v0.2"` updates `config_digest`; `EngineTrace.restart_kinds` and `EngineTrace.reason` expose local diagnostic counts without changing `MatchInput`, `PredictionResult`, CLI flags, or CSV format.

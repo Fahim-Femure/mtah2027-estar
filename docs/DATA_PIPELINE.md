@@ -1,11 +1,10 @@
-# Data pipeline — the real-data `MatchInput` handoff
+# Data pipeline — `MatchInput` ingestion and validation
 
-Date: 2026-11-06. Real-data loader milestone shipped in commit `81dd361` (hardened in `166f35f`).
-Owner: Data Engineering. Consumers: the possession engines and the CLI described in
-`src/mtah/__main__.py`; the contract itself is defined in
-`src/mtah/contracts.py` (`MatchInput` / `PredictionResult`).
+Date: 2026-11-06.
+Consumers: the possession engines and the CLI described in `src/mtah/__main__.py`; the contract
+itself is defined in `src/mtah/contracts.py` (`MatchInput` / `PredictionResult`).
 
-> **Post-promotion status (`8a093bb` algorithm baseline / `d3faa90` reproduction baseline):** The Data Engineering loader (`166f35f`) and Smart Tagging `v0.2` (`d8a0dd0`, `possession-rules-v0.2`) are integrated. Current environment setup uses `requirements.lock` (see Section 1); historical references below to milestone commits (`81dd361`, `2026-11-06`) reflect their original development steps.
+> **Integrated release status (`possession-rules-v0.2`):** The real-data ATD/EPTS/Smart-Tagging loader (`src/mtah/pipeline.py`) is integrated with engine version `possession-rules-v0.2`. Current environment setup uses `requirements.lock` under **CPython 3.11.9 x64 on Windows** (Section 1).
 
 Everything below was checked against `src/mtah/pipeline.py`, `src/mtah/contracts.py` and
 `src/mtah/sources.py` on the date above, by loading the real bundle. Asset formats and the
@@ -18,7 +17,7 @@ The package requires **Python 3.11 or newer** (`pyproject.toml` sets `requires-p
 and `numpy` + `pandas`, both from the default requirements — the pipeline adds no further
 dependency.
 
-The official reproducibility environment for this handoff is **CPython 3.11.9 x64 on Windows**.
+The verified reproducibility environment for this pipeline is **CPython 3.11.9 x64 on Windows**.
 That environment was verified with:
 
 - interpreter: `3.11.9 (tags/v3.11.9:de54cf5, Apr 2 2024, 10:12:12) [MSC v.1938 64 bit (AMD64)]`;
@@ -51,8 +50,7 @@ tzdata==2026.6
 
   A separate isolated venv created from `requirements.lock` produced an exact `pip freeze`
   match, a clean `pip check`, and passed the synthetic suite (141 tests at initial lock
-  creation; 221 tests after S2, Data Engineering integration, and review hardening; **240 tests**
-  after integrating Smart Tagging v0.2 in `8a093bb`). The
+  creation, expanding to **240 tests** in the current `possession-rules-v0.2` release). The
   lock is the reproducibility record for the verified Windows x64 / CPython 3.11 environment;
   other Python versions and platforms are not covered by that result.
 - `scripts/setup.ps1` and `scripts/run_checks.ps1` are stricter than the package: they insist on
@@ -97,7 +95,7 @@ atd engine=hybrid rows=199319 validated=True sha256=<64 hex>
 Tests (synthetic/unit suite):
 
 ```bash
-python -B -m unittest discover -s tests  # verified at 8a093bb / d3faa90: 240 tests, OK
+python -B -m unittest discover -s tests  # 240 tests, OK
 ```
 
 ## 2. Calling `prepare_match`
@@ -114,9 +112,9 @@ match = prepare_match(Path("data"))     # -> mtah.contracts.MatchInput
 - Reads exactly the four tactical assets listed in section 3. It never opens the video, never
   touches the network, and prints nothing — stdout belongs to the CLI's single result line.
 - Returns a contract v1 `MatchInput`: a frozen dataclass whose arrays are defensively copied and
-  flagged read-only at construction, so a consumer cannot mutate them after the handoff.
+  flagged read-only at construction, so a consumer cannot mutate them afterward.
 - Failures raise `ValueError` or `TypeError` whose messages carry no local paths and no data
-  excerpts (integration requirement 3), so the CLI reports exit 2 and the log stays shareable.
+  excerpts, so the CLI reports exit 2 and the log stays shareable.
   Nothing is padded, trimmed, sorted or guessed to make counts fit: a malformed record, a frame
   mismatch, an unknown team or a missing asset stops preparation outright.
 
@@ -330,7 +328,7 @@ contractions or possessives invert quote pairing. The loader’s exit code remai
 ## 10. Known limitations
 
 1. **Ball speed stays `NaN`.** The ball group's third value is documented as "speed" but its
-   units and meaning are unverified, so it is not guessed (integration requirement 6.2). Consumers
+   units and meaning are unverified, so it is not guessed. Consumers
    must derive ball speed from positions if they need it.
 2. **Player speed units are an assumption.** `player_speed_mps` is passed through from the third
    ATD value per slot; [DATA.md](../DATA.md) documents the export as m/s, but this has not been
@@ -358,7 +356,7 @@ contractions or possessives invert quote pairing. The loader’s exit code remai
     `_load_slot_teams` raises a fail-loud error; the current contract does not define
     a per-frame slot-order model.
 
-## Handoff: loading `MatchInput` from another module
+## Loading `MatchInput` from another module
 
 Consume the public source API — the same seam the CLI uses — instead of parsing raw files:
 
@@ -386,14 +384,12 @@ result = predict_with("hybrid", match)               # engines never see a path
 
 ### Python 3.11 clean-rebuild and verification summary
 
-An earlier isolated rebuild (DE commit `81dd361`) installed exclusively from `requirements.lock`
-produced the same four `pip freeze` lines, clean `pip check`, and **141 tests, OK**. Separate local
-operational validation of the integrated data pipeline and exporter was subsequently performed
-without publishing match-level artifacts or digests; competition accuracy and ground-truth scoring
-have not been measured.
+An isolated rebuild installed exclusively from `requirements.lock` produced the same four
+`pip freeze` lines and a clean `pip check`. Separate local operational validation of the data
+pipeline and exporter was performed without publishing match-level artifacts or digests; competition
+accuracy and ground-truth scoring have not been measured.
 
-Integrated verification (`8a093bb` / `d3faa90`, combining DE `166f35f` and Smart Tagging v0.2 `d8a0dd0`; synthetic and mock fixtures only; competition bundle not
-re-accessed, CPython 3.11.9 x64):
+Integrated verification (`possession-rules-v0.2`; synthetic and mock fixtures only; CPython 3.11.9 x64):
 
 ```text
 python -B -m unittest discover -s tests      -> Ran 240 tests, OK

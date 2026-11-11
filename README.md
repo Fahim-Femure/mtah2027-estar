@@ -109,9 +109,8 @@ Full description of every asset and how the frames line up: **[DATA.md](DATA.md)
 
 ## Team Submission & Reproduction (Estar)
 
-Algorithm baseline: `8a093bbf0270f35f3defe575220c5ff25b691baa` (`possession-rules-v0.2`); source code & reproduction baseline: `d3faa906b41a6ed94a47fda07f3fcc30392fc183`.
-
-- **Team Repository URL:** `https://github.com/Fahim-Femure/mtah2027-estar` (branch `main` — clean release snapshot derived from the reviewed `d3faa906b41a6ed94a47fda07f3fcc30392fc183` baseline rather than a continuation of internal development commit history).
+- **Engine Version:** `possession-rules-v0.2` (`hybrid` temporal possession engine)
+- **Team Repository URL:** `https://github.com/Fahim-Femure/mtah2027-estar` (branch `main`)
 
 ### Environment & Dependencies
 - **Package specification:** Python `>= 3.11` with `numpy` and `pandas` ([pyproject.toml](pyproject.toml)).
@@ -167,7 +166,7 @@ Pass `<data_root>` — the parent directory containing `tactical/` — to `--inp
 ### Related Documentation
 - Team technical submission document: [docs/ESTAR_TECHNICAL_DOCUMENT.md](docs/ESTAR_TECHNICAL_DOCUMENT.md)
 - Data pipeline & `MatchInput` contract: [docs/DATA_PIPELINE.md](docs/DATA_PIPELINE.md)
-- Possession engine design & Smart Tagging `v0.2` Option A: [docs/POSSESSION_ENGINE.md](docs/POSSESSION_ENGINE.md), [docs/ENGINE_DECISION_TAGGING_NO_ONSET.md](docs/ENGINE_DECISION_TAGGING_NO_ONSET.md), [docs/ENGINE_V02_IMPLEMENTATION_REPORT.md](docs/ENGINE_V02_IMPLEMENTATION_REPORT.md)
+- Possession engine design & Smart Tagging `v0.2` Option A: [docs/POSSESSION_ENGINE.md](docs/POSSESSION_ENGINE.md), [docs/ENGINE_V02_IMPLEMENTATION_REPORT.md](docs/ENGINE_V02_IMPLEMENTATION_REPORT.md)
 - Preflight & determinism procedure: [docs/SUBMISSION_PREFLIGHT.md](docs/SUBMISSION_PREFLIGHT.md)
 - Official specification, metrics, & competition rules: [SUBMISSION.md](SUBMISSION.md), [EVALUATION.md](EVALUATION.md), [RULES.md](RULES.md), [DATA.md](DATA.md)
 

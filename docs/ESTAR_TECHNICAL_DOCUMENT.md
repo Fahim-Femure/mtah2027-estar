@@ -1,12 +1,8 @@
 # More than a Hack 2027 — Phase 1: Technical Document
 
-> **Document status:** **Team compliance confirmed (11 November 2026); clean release snapshot published to `https://github.com/Fahim-Femure/mtah2027-estar` (`main`; currently private — verify public visibility, final CSV, and Form submission prior to deadline).**  
-> **Intended final deliverable filename:** `Estar.pdf` (paired with submission file `Estar.csv` and repository URL `https://github.com/Fahim-Femure/mtah2027-estar` per `SUBMISSION.md`).  
-> **Revision distinction:**  
-> - **Algorithm baseline:** `8a093bbf0270f35f3defe575220c5ff25b691baa` (`possession-rules-v0.2`, integrating DE loader `166f35f` and Smart Tagging `v0.2` Option A `d8a0dd0`).  
-> - **Code/reproduction baseline:** `d3faa906b41a6ed94a47fda07f3fcc30392fc183` (`README.md`, repository docs, `scripts/setup.ps1`, and `src/mtah/sources.py` module docstring updates over the algorithm baseline; no algorithm changes).  
-> - **Document & publication snapshot scope:** The release repository (`https://github.com/Fahim-Femure/mtah2027-estar`, branch `main`) is a clean release snapshot derived from the reviewed `d3faa906b41a6ed94a47fda07f3fcc30392fc183` (`d3faa90`) code baseline, not a continuation of its original commit history. This technical document (`Estar.pdf` / `docs/ESTAR_TECHNICAL_DOCUMENT.md`) is the submission artifact prepared for that snapshot and is not itself contained in commit `d3faa90`.  
-> - **Submission CSV & scoring status:** `Estar.csv` has not yet been generated or submitted; competition accuracy and scoring (`spellF1`, `macroF1`) remain unmeasured.
+> **Deliverables (`SUBMISSION.md`):** Technical report `Estar.pdf`, prediction file `Estar.csv`, and code repository `https://github.com/Fahim-Femure/mtah2027-estar` (branch `main`).  
+> **Engine version:** `possession-rules-v0.2` (deterministic rule-based `hybrid` engine).  
+> **Compliance & scoring scope:** Team-level competition compliance confirmed as of 11 November 2026. No public or private ground-truth scoring (`spellF1`, `macroF1`) has been performed, and competition accuracy remains unmeasured.
 
 ## Team Information
 
@@ -15,7 +11,7 @@
   1. Mgs. M. Fahim Rahmatullah — Team Leader
   2. Khalil Amin Adillah — Member
   3. Raihan Daris Ramadhan — Member
-- **Code Repository URL:** `https://github.com/Fahim-Femure/mtah2027-estar` (branch `main`; clean release snapshot of `d3faa906b41a6ed94a47fda07f3fcc30392fc183`; currently private — ensure public visibility before Form upload per `SUBMISSION.md`)
+- **Code Repository URL:** `https://github.com/Fahim-Femure/mtah2027-estar` (branch `main`)
 
 ---
 
@@ -28,13 +24,13 @@
 3. **No uploading provided competition data to cloud AI services** (*Confirmed at team level as of 11 November 2026*): No raw competition files, supplied videos, ground-truth files, tracking rows or coordinates, or non-sanitized match extracts were uploaded to cloud AI services. Only sanitized aggregate operational diagnostics were shared where permitted by competition guidance.
 4. **No training, fitting, calibration, or tuning using provided video or ground truth** (*Confirmed at team level as of 11 November 2026*): Zero parameters were trained, fitted, calibrated, or tuned using the supplied competition video, public 5-minute ground truth, or private full-match ground truth.
 
-### Remaining Pre-Submission Items
+### Submission Checklist
 
-While team-level compliance is confirmed above as of 11 November 2026 and the clean release snapshot is staged at `https://github.com/Fahim-Femure/mtah2027-estar` (`main`), the following pre-submission actions remain open before final Phase 1 upload:
+To satisfy `SUBMISSION.md` for final Phase 1 evaluation:
 
-- **Repository visibility (`Pending`):** Confirm `https://github.com/Fahim-Femure/mtah2027-estar` is switched from **private** to **public** per `SUBMISSION.md` prior to Form submission so organizers can access and reproduce the snapshot without authentication.
-- **Local `Estar.csv` generation, determinism check & validation (`Pending`):** On an authorized workstation holding `<data_root>`, generate `Estar.csv` and repeat-run `Estar_repeat.csv`, verify identity via `scripts/submission_preflight.py --compare`, and pass `evaluation/validate_submission.py`.
-- **Google Form submission (`Pending`):** Confirm the official Google Form URL and team Google account, and submit `Estar.csv`, `Estar.pdf`, and `https://github.com/Fahim-Femure/mtah2027-estar` ahead of November 17, 2026.
+- **Public repository access:** Ensure `https://github.com/Fahim-Femure/mtah2027-estar` (`main`) is publicly accessible without authentication when submitted.
+- **Local CSV generation & validation:** Generate `Estar.csv` and a repeat-run comparison CSV locally from `<data_root>` using the documented `--engine hybrid` commands in Section 6, verify byte-for-byte reproducibility via `scripts/submission_preflight.py --compare`, and pass `evaluation/validate_submission.py`.
+- **Official form deliverables:** Submit `Estar.csv`, `Estar.pdf`, and `https://github.com/Fahim-Femure/mtah2027-estar` through the official submission form.
 
 ---
 
@@ -64,7 +60,7 @@ The design aligns with the challenge structure documented in `EVALUATION.md` and
 
 The classification below describes **strictly what the submitted software (`mtah.pipeline.prepare_match` and `mtah.engine`) opens and processes**. Team-level agreement by all three members with the four competition compliance requirements as of 11 November 2026 is recorded in the `TEAM COMPLIANCE CONFIRMATION` section above.
 
-| Competition Asset / Field | Behavior in Submitted Code (`8a093bb` / `d3faa90`) | Software Status |
+| Competition Asset / Field | Behavior in Submitted Code (`possession-rules-v0.2`) | Software Status |
 |---|---|---|
 | `tactical/BAR-ATH_tactical_atd.txt` (positions) | Streams player `(x, y)` and ball `(x, y)` coordinates, finiteness masks, and contiguous `1..199319` frame IDs | **Used (positions & observation masks)** |
 | `tactical/BAR-ATH_tactical_atd.xml` | Resolves `<Teams>`, `<Players>`, `<PlayerChannels>`, and `<DataFormatSpecification>` slot order to `"H"` / `"A"` (`Barcelona` / `Atletic Club`) | **Used (slot-to-team mapping)** |
@@ -87,7 +83,7 @@ The classification below describes **strictly what the submitted software (`mtah
   - Temporal confirmation: `confirm_frames = 10` (`0.4 s` at `25` fps), `run_gap_frames = 50` (`2.0 s`)
   - Dead-ball & restart logic: `out_margin_m = 1.0`, `restart_speed_mps = 1.0`, `min_dead_frames = 25` (`1.0 s`), `stationary_speed_mps = 0.3`, `stationary_frames = 75` (`3.0 s`), `set_piece_codes = ("SET PIECES",)`, `set_piece_window_frames = 50` (`2.0 s`), `set_piece_max_lead_frames = 250` (`10.0 s`), `use_set_piece_team_prior = True`
 - Repository source and implementation reports (`src/mtah/engine/config.py`, `docs/POSSESSION_ENGINE.md`, `docs/ENGINE_V02_IMPLEMENTATION_REPORT.md`) record that no parameter was fitted, calibrated, or tuned on competition data or ground truth; the team owner has confirmed as of 11 November 2026 that all three members agree with requirement 4 in the `TEAM COMPLIANCE CONFIRMATION` section above.
-- **Automated test provenance & non-GT diagnostics:** Automated verification consists of `240` synthetic/mock tests passing in both normal (`python -B`) and optimized (`python -O -B`) runs using in-memory fixtures only (`mtah.synthetic`, `tests/scenarios.py`, `tests/mock_loader.py`). Separately from synthetic tests and from competition scoring, non-GT Section 8 operational diagnostics were executed locally by an authorized operator to inspect aggregate counts and CSV formatting; `macroF1`, `spellF1`, and competition accuracy remain unmeasured, and ground-truth scoring has not been performed.
+- **Automated test provenance & non-GT diagnostics:** Automated verification consists of `240` synthetic/mock tests passing in both normal (`python -B`) and optimized (`python -O -B`) runs using in-memory fixtures only (`mtah.synthetic`, `tests/scenarios.py`, `tests/mock_loader.py`). Separately from synthetic tests and from competition scoring, non-ground-truth operational diagnostics were executed locally by an authorized operator to inspect aggregate counts and CSV formatting; no public or private ground-truth scoring has been performed, and `macroF1`, `spellF1`, and competition accuracy remain unmeasured.
 
 ---
 
@@ -131,7 +127,7 @@ The classification below describes **strictly what the submitted software (`mtah
 
 ## 6. Reproduction Instructions
 
-From a clean checkout of `https://github.com/Fahim-Femure/mtah2027-estar` (branch `main`, clean release snapshot of code/reproduction baseline `d3faa906b41a6ed94a47fda07f3fcc30392fc183` over algorithm baseline `8a093bbf0270f35f3defe575220c5ff25b691baa`):
+From a clean checkout of `https://github.com/Fahim-Femure/mtah2027-estar` (branch `main`, engine version `possession-rules-v0.2`):
 
 ### Environment Setup (`CPython 3.11.9`, 64-bit, Windows + `requirements.lock`)
 - Runtime pins in `requirements.lock`: `numpy==2.4.6`, `pandas==3.1.1`, `python-dateutil==4.0.0`, `tzdata==2026.6` (`pyproject.toml` declares `requires-python = ">=3.11"`; optional `requirements-starter.txt` dependencies `kloppy==3.18.0`, `matplotlib`, `notebook` are not required for submission generation).
@@ -147,7 +143,7 @@ From a clean checkout of `https://github.com/Fahim-Femure/mtah2027-estar` (branc
 ```
 
 - Alternatively, `.\scripts\setup.ps1 -Python311 <path-to-cpython-3.11.9-x64>` automates venv creation, `requirements.lock` + `--no-deps -e .` installation, and `pip check`; because `setup.ps1` only validates Python `3.11` and `64`-bit (`setup.ps1` does **not** verify micro-version `3.11.9` itself), supply CPython `3.11.9` (64-bit) explicitly and run `.\.venv\Scripts\python.exe -B scripts\check_environment.py` afterward to verify exact `3.11.9` and pinned dependency versions.
-- If skipping `pip install --no-deps -e .` (or running from an alternate worktree whose shared `.venv` points elsewhere), set `PYTHONPATH` explicitly to this checkout's `src` directory (`$env:PYTHONPATH = "$PWD\src"` in PowerShell, or `PYTHONPATH=src` on POSIX). On POSIX platforms, invoke an explicit CPython `3.11.9` (64-bit) interpreter rather than assuming a generic `python3.11` binary is `3.11.9`.
+- If skipping `pip install --no-deps -e .` (or running from another checkout whose shared `.venv` points elsewhere), set `PYTHONPATH` explicitly to this checkout's `src` directory (`$env:PYTHONPATH = "$PWD\src"` in PowerShell, or `PYTHONPATH=src` on POSIX). On POSIX platforms, invoke an explicit CPython `3.11.9` (64-bit) interpreter rather than assuming a generic `python3.11` binary is `3.11.9`.
 
 ### Expected Input Directory Layout
 Pass `<data_root>` — the parent directory containing `tactical/` — to `--input` (do **not** pass `<data_root>/tactical`):

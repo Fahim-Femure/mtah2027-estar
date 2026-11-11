@@ -11,7 +11,7 @@ Evidence used (all described in DATA.md / CHALLENGE.md):
   * Smart Tagging set-piece clusters establish restarts only with movement
     evidence in [S - window, E); without evidence while a stoppage is in
     progress, the window abstains as DEAD_UNCONFIRMED (X) and the hold ends
-    at E (docs/ENGINE_DECISION_TAGGING_NO_ONSET.md);
+    at E (possession-rules-v0.2 Option A abstention; docs/POSSESSION_ENGINE.md);
   * a stationary ball with nobody near it for several seconds is awaiting a
     restart.
 
